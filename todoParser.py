@@ -79,9 +79,6 @@ def findComments(fileName):
                     if((lines[i].rfind(commentStatement) > lines[i].rfind(commentChar)) and (lines[i].rfind(commentChar) >= 0)):
                         print("* %s, line %s: %s"%(fileName, i+1, lines[i]))
 
-                # TODO: possibly include multi-line TODOs as well
-
-
 # TODO: implement parsing of "git ls-files"
 
 if(__name__ == "__main__"):

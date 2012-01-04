@@ -22,7 +22,9 @@ Filetypes supported:
 Usage
 =====
 
-TODO
+Use the parser according to::
+
+  ./todoParser file1 file2
 
 Known annoyances
 ================
