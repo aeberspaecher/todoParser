@@ -32,6 +32,8 @@ Source formats supported so far:
 *.tex: LaTeX
 """
 
+from optparse import OptionParser
+
 statements = ["TODO", "FIXME"]
 filetypes = [ {"endings": (".f90"), "commentChars": ("!"), "type": "free-form Fortran"},
               {"endings": (".tex"), "commentChars": ("%"), "type": "LaTeX"},
@@ -39,6 +41,9 @@ filetypes = [ {"endings": (".f90"), "commentChars": ("!"), "type": "free-form Fo
             ]
 
 
+progUsage = "usage: %prog file"
+parser = OptionParser(usage=progUsage)
+(options, args) = parser.parse_args()
 
 def findComments(fileName):
     """Find comments in file 'fileName' and write them to the terminal.
@@ -52,16 +57,17 @@ def findComments(fileName):
         return
 
     # determine filetype by ending:
-    foundType = False
-    for fTypeIndex in range(len(filetypes)): # iterate till ending found
-        if(fileName.endswith(filetypes[fTypeIndex]["endings"])):
-            print("File %s is of type %s."%(fileName, filetypes[fTypeIndex]["type"]))
+    for i in range(len(filetypes)): # iterate till ending is found
+        if(fileName.endswith(filetypes[i]["endings"])):
+            print("File %s is of type %s."%(fileName, filetypes[i]["type"]))
+            fTypeIndex = i
             exit
-        if(fTypeIndex == len(filetypes)):
+        if(i == len(filetypes)):
             print("File %s is not of known type."%fileName)
             return
 
     lines = fileObj.readlines()
+    fileObj.close()
 
     # find comments:
     for i in range(len(lines)):
@@ -74,5 +80,11 @@ def findComments(fileName):
                         print("* %s, line %s: %s"%(fileName, i+1, lines[i]))
 
                 # TODO: possibly include multi-line TODOs as well
-                
-findComments("parseTodo.py")
+
+
+# TODO: implement parsing of "git ls-files"
+
+if(__name__ == "__main__"):
+    # go through all files given as an arguments to the script:
+    for fileName in args:
+        findComments(fileName)
