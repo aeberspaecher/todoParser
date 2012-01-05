@@ -45,14 +45,6 @@ filetypes = [ {"endings": (".f90"), "commentChars": ("!"), "type": "free-form Fo
             ]
 whitespaceChars = [ " ", "\t"]
 
-# define options for OptionParser:
-progUsage = "usage: %prog file1 file2"
-parser = OptionParser(usage=progUsage)
-parser.add_option("-c", "--vc", action="store_true", default=False,
-                  dest="useVC", help="Use list of files under version control (git/svn).")
-parser.add_option("-v", "--verbose", action="store_true", default=False,
-                  dest="verbose", help="Be verbose -- mention files of unknown type.")
-(options, args) = parser.parse_args()
 
 def findTODOs(fileName):
     """Find comments in file 'fileName' and write them to the terminal.
@@ -149,6 +141,15 @@ def listOfVCfiles():
     return []
 
 if(__name__ == "__main__"):
+
+    # define options for OptionParser:
+    progUsage = "usage: %prog file1 file2"
+    parser = OptionParser(usage=progUsage)
+    parser.add_option("-c", "--vc", action="store_true", default=False,
+                      dest="useVC", help="Use list of files under version control (git/svn).")
+    parser.add_option("-v", "--verbose", action="store_true", default=False,
+                      dest="verbose", help="Be verbose -- mention files of unknown type.")
+    (options, args) = parser.parse_args()
 
     # decide what to do:
     # if --vc is given, go through the files under version control first:
