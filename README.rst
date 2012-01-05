@@ -15,6 +15,7 @@ Features
 
 Filetypes supported:
 
+- C/C++
 - Python/Cython
 - free-form Fortran
 - LaTeX
@@ -26,11 +27,32 @@ Use the parser according to::
 
   ./todoParser file1 file2
 
+Supported options:
+
+- ``--vc``: parse files under version control. Supported so far: git/svn.
+- ``--verbose``: print names of file for which parsing fails due to
+  unsupported filetype.
+
+- a typical use case might be something like
+
+  ::
+    ./todoParser.py --vc > TODO
+
+  to generate a TODO list for a project under version control.
+
 Known annoyances
 ================
 
-The parser will ignore TODOs inside strings. This may be undesired behaviour
-in eg. Python docstrings.
+- The parser will ignore TODOs inside strings. This may be undesired behaviour
+  in eg. Python docstrings.
+
+- In C/C++ code, the parser fails to find TODOs of the following kind::
+
+    i = 2 /* assign a number
+             TODO: check if 2 is correct in any case */
+
+- The script calls ``git ls-files`` respectively ``svn ls``. If these calls are
+  unsuccessful, the error messages appear in the output.
 
 License
 =======

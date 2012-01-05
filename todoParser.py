@@ -2,17 +2,17 @@
 #-*- coding:utf-8 -*-
 
 #  Copyright 2012 Alexander Eberspächer <alex(dot)eberspaecher(at)googlemail.com>
-# 
+#
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
 #  the Free Software Foundation; either version 2 of the License, or
 #  (at your option) any later version.
-#  
+#
 #  This program is distributed in the hope that it will be useful,
 #  but WITHOUT ANY WARRANTY; without even the implied warranty of
 #  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 #  GNU General Public License for more details.
-#  
+#
 #  You should have received a copy of the GNU General Public License
 #  along with this program; if not, write to the Free Software
 #  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
@@ -32,39 +32,55 @@ Source formats supported so far:
 *.tex: LaTeX
 """
 
+# to add new filetypes or TODO-like statements, add to the lists 'statements' and 'filetypes'
+
+import os
 from optparse import OptionParser
 
 statements = ["TODO", "FIXME"]
 filetypes = [ {"endings": (".f90"), "commentChars": ("!"), "type": "free-form Fortran"},
               {"endings": (".tex"), "commentChars": ("%"), "type": "LaTeX"},
-              {"endings": (".py", ".pyx"), "commentChars": ("#"), "type": "Python/Cython"}
+              {"endings": (".py", ".pyx"), "commentChars": ("#"), "type": "Python/Cython"},
+              {"endings": (".c", ".h", ".cpp", ".hpp"), "commentChars": ("//", "/*"), "type": "C/C++"}
             ]
+whitespaceChars = [ " ", "\t"]
 
-
-progUsage = "usage: %prog file"
+# define options for OptionParser:
+progUsage = "usage: %prog file1 file2"
 parser = OptionParser(usage=progUsage)
+parser.add_option("-c", "--vc", action="store_true", default=False,
+                  dest="useVC", help="Use list of files under version control (git/svn).")
+parser.add_option("-v", "--verbose", action="store_true", default=False,
+                  dest="verbose", help="Be verbose -- mention files of unknown type.")
 (options, args) = parser.parse_args()
 
-def findComments(fileName):
+def findTODOs(fileName):
     """Find comments in file 'fileName' and write them to the terminal.
     """
+
+    numOfTODOs = 0
 
     # try to open the file:
     try:
         fileObj = open(fileName, mode="r")
     except:
         print("Could not open file %s."%fileName)
-        return
+        return numOfTODOs
+
+    #print "openend %s"%fileName
 
     # determine filetype by ending:
+    foundType = False
     for i in range(len(filetypes)): # iterate till ending is found
         if(fileName.endswith(filetypes[i]["endings"])):
-            print("File %s is of type %s."%(fileName, filetypes[i]["type"]))
+            #print("File %s is of type %s."%(fileName, filetypes[i]["type"]))
             fTypeIndex = i
+            foundType = True
             exit
-        if(i == len(filetypes)):
+    if(not foundType):
+        if(options.verbose):
             print("File %s is not of known type."%fileName)
-            return
+        return
 
     lines = fileObj.readlines()
     fileObj.close()
@@ -77,11 +93,77 @@ def findComments(fileName):
                 # check if the comment statements appears *after* a comment character:
                 for commentChar in filetypes[fTypeIndex]["commentChars"]:
                     if((lines[i].rfind(commentStatement) > lines[i].rfind(commentChar)) and (lines[i].rfind(commentChar) >= 0)):
-                        print("* %s, line %s: %s"%(fileName, i+1, lines[i]))
+                        printTODOline(fileName, i+1, lines[i])
+                        numOfTODOs += 1
 
-# TODO: implement parsing of "git ls-files"
+    return numOfTODOs
+
+def printTODOline(fileName, lineNumber, line):
+    """Print a line containing a TODO-like statement.
+
+    All formatting has to appear here. Leading white space is stripped.
+    """
+
+    for i in range(len(line)): # increase i till it equals to index of the first non-whitespace character
+        if(line[i] not in whitespaceChars):
+            break
+
+    print("* %s, line %s: %s"%(fileName, lineNumber, line[i:-1])) # strip newline
+
+
+def listOfVCfiles():
+    """Return a list of all files that are under version control.
+
+    Currently supported: git and svn.
+
+    The current directory is used.
+    """
+
+    failureStrings = {"git": "Not a git repository",
+                      "svn": "is not a working copy"}
+
+    # try git first:
+    output = os.popen("git ls-files")
+    outputLines = output.readlines()
+    if(len(outputLines) > 0):
+        if(outputLines[0].rfind(failureStrings["git"]) == -1): # directory is a git repo:
+            fileList = []
+            for fileName in outputLines:
+                fileList.append(fileName[:-1]) # remove \n
+            return fileList
+
+    # try svn:
+    output = os.popen("svn ls")
+    outputLines = output.readlines()
+    if(len(outputLines) > 0):
+        if(outputLines[0].rfind(failureStrings["git"]) == -1): # directory is a svn repo:
+            fileList = []
+            for fileName in outputLines:
+                fileList.append(fileName[:-1]) # remove \n
+            return fileList
+
+    # TODO: figure out how to use the subprocess module such that STDERR is not shown in terminal
+
+    # catch unsuccessful case:
+    print("Directory appears to be neither a git nor svn repository!")
+    return []
 
 if(__name__ == "__main__"):
+
+    # decide what to do:
+    # if --vc is given, go through the files under version control first:
+    if(options.useVC):
+        filesToAppend = listOfVCfiles()
+        if(len(filesToAppend) > 0):
+            for newFile in filesToAppend:
+                args.append(newFile)
+
+    if(len(args) == 0):
+        parser.error("No files specified.")
+        os.exit(0)
+
     # go through all files given as an arguments to the script:
     for fileName in args:
-        findComments(fileName)
+        number = findTODOs(fileName)
+        if(number > 0):
+            print("") # print a newline after each file processed
