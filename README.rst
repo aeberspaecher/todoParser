@@ -36,6 +36,7 @@ Supported options:
 - a typical use case might be something like
 
   ::
+  
     ./todoParser.py --vc > TODO
 
   to generate a TODO list for a project under version control.
