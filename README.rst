@@ -20,6 +20,11 @@ Filetypes supported:
 - free-form Fortran
 - LaTeX
 
+Parse files under version control. Supported:
+
+- git
+- svn
+
 Usage
 =====
 
@@ -30,7 +35,7 @@ Use the parser according to::
 Supported options:
 
 - ``--vc``: parse files under version control. Supported so far: git/svn.
-- ``--verbose``: print names of file for which parsing fails due to
+- ``--verbose``: print names of files for which parsing fails due to an
   unsupported filetype.
 
 - a typical use case might be something like
@@ -39,13 +44,14 @@ Supported options:
   
     ./todoParser.py --vc > TODO
 
-  to generate a TODO list for a project under version control.
+  to generate a code-based TODO list for a project under version control.
 
 Known annoyances
 ================
 
-- The parser will ignore TODOs inside strings. This may be undesired behaviour
-  in eg. Python docstrings.
+- The parser will ignore TODOs inside strings if the strings are part of
+  code (i.e., not inside a comment). This may be undesired behaviour in eg.
+  Python docstrings.
 
 - In C/C++ code, the parser fails to find TODOs of the following kind::
 
