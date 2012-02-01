@@ -45,12 +45,15 @@ filetypes = [ {"endings": (".f90"), "commentChars": ("!"), "type": "free-form Fo
             ]
 whitespaceChars = [ " ", "\t"]
 
+_linesChecked = 0
+_todoLines = 0
 
 def findTODOs(fileName):
     """Find comments in file 'fileName' and write them to the terminal.
     """
 
     numOfTODOs = 0
+    global _linesChecked
 
     # try to open the file:
     try:
@@ -72,13 +75,14 @@ def findTODOs(fileName):
     if(not foundType):
         if(options.verbose):
             print("File %s is not of known type."%fileName)
-        return
+        return numOfTODOs
 
     lines = fileObj.readlines()
     fileObj.close()
 
     # find comments:
     for i in range(len(lines)):
+        _linesChecked += 1
         # check if line contains a comment and TODO-like thing
         for commentStatement in statements:
             if(commentStatement in lines[i]):
@@ -166,5 +170,9 @@ if(__name__ == "__main__"):
     # go through all files given as an arguments to the script:
     for fileName in args:
         number = findTODOs(fileName)
+        _todoLines += number
         if(number > 0):
             print("") # print a newline after each file processed
+
+    print("%s lines checked in total, %s TODO-like statements found."\
+          %(_linesChecked, _todoLines))
