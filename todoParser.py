@@ -71,7 +71,6 @@ def findTODOs(fileName):
             #print("File %s is of type %s."%(fileName, filetypes[i]["type"]))
             fTypeIndex = i
             foundType = True
-            exit
     if(not foundType):
         if(options.verbose):
             print("File %s is not of known type."%fileName)
