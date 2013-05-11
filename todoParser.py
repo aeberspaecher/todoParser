@@ -48,6 +48,7 @@ whitespaceChars = [ " ", "\t"]
 _linesChecked = 0
 _todoLines = 0
 
+
 def findTODOs(fileName):
     """Find comments in file 'fileName' and write them to the terminal.
     """
@@ -93,17 +94,17 @@ def findTODOs(fileName):
 
     return numOfTODOs
 
+
 def printTODOline(fileName, lineNumber, line):
     """Print a line containing a TODO-like statement.
 
     All formatting has to appear here. Leading white space is stripped.
     """
 
-    for i in range(len(line)): # increase i till it equals to index of the first non-whitespace character
-        if(line[i] not in whitespaceChars):
-            break
+    # find position of first non white-space character:
+    i = len(line) - len(line.lstrip())
 
-    print("* %s, line %s: %s"%(fileName, lineNumber, line[i:-1])) # strip newline
+    print("* %s, line %s: %s"%(fileName, lineNumber, line[i:-1]))  # strip newline
 
 
 def listOfVCfiles():
@@ -121,20 +122,20 @@ def listOfVCfiles():
     output = os.popen("git ls-files")
     outputLines = output.readlines()
     if(len(outputLines) > 0):
-        if(outputLines[0].rfind(failureStrings["git"]) == -1): # directory is a git repo:
+        if(outputLines[0].rfind(failureStrings["git"]) == -1):  # directory is a git repo:
             fileList = []
             for fileName in outputLines:
-                fileList.append(fileName[:-1]) # remove \n
+                fileList.append(fileName[:-1])  # remove \n
             return fileList
 
     # try svn:
     output = os.popen("svn ls")
     outputLines = output.readlines()
     if(len(outputLines) > 0):
-        if(outputLines[0].rfind(failureStrings["git"]) == -1): # directory is a svn repo:
+        if(outputLines[0].rfind(failureStrings["git"]) == -1):  # directory is a svn repo:
             fileList = []
             for fileName in outputLines:
-                fileList.append(fileName[:-1]) # remove \n
+                fileList.append(fileName[:-1])  # remove \n
             return fileList
 
     # TODO: figure out how to use the subprocess module such that STDERR is not shown in terminal
@@ -164,14 +165,13 @@ if(__name__ == "__main__"):
 
     if(len(args) == 0):
         parser.error("No files specified.")
-        os.exit(0)
 
     # go through all files given as an arguments to the script:
     for fileName in args:
         number = findTODOs(fileName)
         _todoLines += number
         if(number > 0):
-            print("") # print a newline after each file processed
+            print("")  # print a newline after each file processed
 
     print("%s lines checked in total, %s TODO-like statements found."\
           %(_linesChecked, _todoLines))
