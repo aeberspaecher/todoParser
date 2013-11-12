@@ -1,6 +1,6 @@
-==========
-todoParser
-==========
+===========
+parse_todos
+===========
 
 About
 =====
@@ -8,7 +8,7 @@ About
 This small script may extract lines that contain statements like "TODO" or
 "FIXME" in comments inside a source file.
 
-todoParser is written in Python and is easily extendable.
+parse_todos is written in Python and is easily extendable.
 
 Features
 ========
@@ -30,7 +30,7 @@ Usage
 
 Use the parser according to::
 
-  ./todoParser file1 file2
+  ./parse_todos file1 file2
 
 Supported options:
 
@@ -41,8 +41,8 @@ Supported options:
 - a typical use case might be something like
 
   ::
-  
-    ./todoParser.py --vc > TODO
+
+    ./parse_todos.py --vc > TODO
 
   to generate a code-based TODO list for a project under version control.
 
@@ -64,9 +64,9 @@ Known annoyances
 License
 =======
 
-todoParser is distributed under the terms of the GNU General Public License
+parse_todos is distributed under the terms of the GNU General Public License
 as published by the Free Software Foundation; either version 2 of the
 License, or (at your option) any later version.  A copy of this license can
 be found in the file COPYING included with the source code of this program.
 
-2012 by Alexander Eberspächer
+(c) 2012 by Alexander Eberspächer
