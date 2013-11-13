@@ -35,6 +35,7 @@ Source formats supported so far:
 # to add new filetypes or TODO-like statements, add to the lists 'statements' and 'filetypes'
 
 import os
+import sys
 from optparse import OptionParser
 
 statements = ("TODO", "FIXME")
@@ -43,56 +44,84 @@ filetypes = ( {"endings": (".f90"), "comment_chars": ("!"), "type": "free-form F
               {"endings": (".py", ".pyx"), "comment_chars": ("#"), "type": "Python/Cython"},
               {"endings": (".c", ".h", ".cpp", ".hpp"), "comment_chars": ("//", "/*"), "type": "C/C++"}
             )
-whitespace_chars = ( " ", "\t")
+whitespace_chars = (" ", "\t")
 
-_lines_checked = 0
-_todo_lines = 0
+
+def check_filetype(filename):
+    """Check for filetype by checking the file extension. If the file has a
+    known extension, return a dictionary providing information on the comment
+    characters of the file type.
+    """
+
+    for filetype in filetypes:  # iterate till ending is found
+        if(filename.endswith(filetype["endings"])):
+            return filetype
+
+    # if filetype is unknown, this is reached:
+    return None
+
+
+def count_and_print_todos(filename, filetype):
+    """Parse a file for TODO-like statements. Print all found statements and
+    return number of hits.
+
+    Parameters
+    ----------
+    filename : string
+    filetype : dict
+        Has to provide information on the comment character used by the file
+        type via entry "comment_chars".
+
+    Returns
+    -------
+    num_todos : int
+        Number of TODOs found.
+    """
+
+    comment_chars = filetype["comment_chars"]
+    lines_checked = 0
+    num_todos = 0
+
+    try:
+        file_obj = open(filename, "r")
+    except IOError:
+        print("Could not open file %s"%filename)
+    else:
+        with file_obj:
+            lines = file_obj.readlines()
+
+    for j, line in enumerate(lines):
+        lines_checked += 1
+        # check if line contains a comment and TODO-like thing
+        for comment_statement in statements:
+            if(comment_statement in line):
+                # check if the comment statements appears *after* a comment character:
+                for comment_char in comment_chars:
+                    if((line.rfind(comment_statement) > line.rfind(comment_char)) and (line.rfind(comment_char) >= 0)):
+                        print_todo_line(filename, j+1, line)
+                        num_todos += 1
+
+    return lines_checked, num_todos
 
 
 def find_todos(filename):
     """Find comments in file 'filename' and write them to the terminal.
+
+    Returns
+    -------
+    num_todos : int
+        Number of TODO-like statments in parsed file.
     """
 
-    num_todos = 0
-    global _lines_checked
-
-    # try to open the file:
-    try:
-        file_obj = open(filename, mode="r")
-    except:
-        print("Could not open file %s."%filename)
-        return num_todos
-
-    #print "openend %s"%filename
-
-    # determine filetype by ending:
-    found_type = False
-    for i in range(len(filetypes)): # iterate till ending is found
-        if(filename.endswith(filetypes[i]["endings"])):
-            #print("File %s is of type %s."%(filename, filetypes[i]["type"]))
-            filetype_index = i
-            found_type = True
-    if(not found_type):
+    file_type = check_filetype(filename)
+    if(file_type is None):
         if(options.verbose):
             print("File %s is not of known type."%filename)
-        return num_todos
+        return 0, 0
 
-    lines = file_obj.readlines()
-    file_obj.close()
+    lines_checked, num_todos = count_and_print_todos(filename, file_type)
 
-    # find comments:
-    for i in range(len(lines)):
-        _lines_checked += 1
-        # check if line contains a comment and TODO-like thing
-        for comment_statement in statements:
-            if(comment_statement in lines[i]):
-                # check if the comment statements appears *after* a comment character:
-                for comment_char in filetypes[filetype_index]["comment_chars"]:
-                    if((lines[i].rfind(comment_statement) > lines[i].rfind(comment_char)) and (lines[i].rfind(comment_char) >= 0)):
-                        print_todo_line(filename, i+1, lines[i])
-                        num_todos += 1
-
-    return num_todos
+    return lines_checked, num_todos
 
 
 def print_todo_line(filename, lineNumber, line):
@@ -141,11 +170,13 @@ def vc_files():
     # TODO: figure out how to use the subprocess module such that STDERR is not shown in terminal
 
     # catch unsuccessful case:
-    print >> sys.err, "Directory appears to be neither a git nor svn repository!"
+    print >> sys.stderr, "Directory appears to be neither a git nor svn repository!"
     return []
 
 
 if(__name__ == "__main__"):
+    lines_checked = 0
+    todo_lines = 0
 
     # define options for OptionParser:
     prog_usage = "usage: %prog file1 file2"
@@ -169,10 +200,12 @@ if(__name__ == "__main__"):
 
     # go through all files given as an arguments to the script:
     for filename in args:
-        number = find_todos(filename)
-        _todo_lines += number
-        if(number > 0):
+        lines, todos = find_todos(filename)
+        lines_checked += lines
+        todo_lines += todos
+
+        if(todos > 0):
             print("")  # print a newline after each file processed
 
-    print("%s lines checked in total, %s TODO-like statements found."\
-          %(_lines_checked, _todo_lines))
+    print("%s lines checked in total, %s TODO-like statements found."
+          %(lines_checked, todo_lines))
