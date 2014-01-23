@@ -38,13 +38,23 @@ Supported options:
 - ``--verbose``: print names of files for which parsing fails due to an
   unsupported filetype.
 
+Notes:
+
 - a typical use case might be something like
 
   ::
 
     ./parse_todos.py --vc > TODO
 
-  to generate a code-based TODO list for a project under version control.
+  to generate a code-based TODO list for the current directory which is assumed
+  to be under version control.
+
+- you may combine the ``--vc`` option with paths::
+
+    ./parse_todos.py --vc . ~/project1 /home/user/project2
+
+  parses all supported files in ``.``, ``~/project1`` and
+  ``/home/user/project2``.
 
 Known annoyances
 ================
@@ -69,4 +79,4 @@ as published by the Free Software Foundation; either version 2 of the
 License, or (at your option) any later version.  A copy of this license can
 be found in the file COPYING included with the source code of this program.
 
-(c) 2012 by Alexander Eberspächer
+(c) 2012-2013 by Alexander Eberspächer

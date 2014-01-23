@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #-*- coding:utf-8 -*-
 
-#  Copyright 2012 Alexander Eberspächer <alex(dot)eberspaecher(at)googlemail.com>
+#  Copyright 2012-2013 Alexander Eberspächer <alex(dot)eberspaecher(at)googlemail.com>
 #
 #  This program is free software; you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -27,24 +27,73 @@ terminal.
 Source formats supported so far:
 
 *.f90: free-form Fortran 90
+*.c, *.h, *.cpp, *.hpp, *.cxx, *.hxx: C/C++
 *.py: Python
-*.pyx: Cython
+*.pyx, *.pxd, *.pxi: Cython
 *.tex: LaTeX
+*.m: Matlab
 """
 
 # to add new filetypes or TODO-like statements, add to the lists 'statements' and 'filetypes'
 
 import os
+import os.path
 import sys
 from optparse import OptionParser
+from subprocess import Popen, PIPE
 
 statements = ("TODO", "FIXME")
 filetypes = ( {"endings": (".f90"), "comment_chars": ("!"), "type": "free-form Fortran"},
               {"endings": (".tex"), "comment_chars": ("%"), "type": "LaTeX"},
-              {"endings": (".py", ".pyx"), "comment_chars": ("#"), "type": "Python/Cython"},
-              {"endings": (".c", ".h", ".cpp", ".hpp"), "comment_chars": ("//", "/*"), "type": "C/C++"}
+              {"endings": (".py", ".pyx", "*.pxi"), "comment_chars": ("#"), "type": "Python/Cython"},
+              {"endings": (".c", ".h", ".cpp", ".hpp"), "comment_chars": ("//", "/*"), "type": "C/C++"},
+              {"endings": (".m"), "comment_chars": ("%"), "type": "Matlab"},
             )
 whitespace_chars = (" ", "\t")
+
+
+def get_dir(path):
+    """Get absolute directory of path, no matter if path points to a file,
+    a directory, is absolute or relative.
+    """
+
+    abspath = os.path.abspath(path)
+    if not os.path.isdir(abspath):
+        abs_dir = os.path.dirname(abspath)
+    else:
+        abs_dir = abspath
+
+    return abs_dir
+
+
+def is_git_repo(path):
+    """Checks if path is in a git repository.
+    """
+
+    base_path = os.path.realpath(path)
+    sub_path = ""
+
+    is_repo = True
+
+    while not os.path.exists(os.path.join(base_path, ".git")):
+        # ascend in directory hierarchy if possible
+        base_path, new_sub_dir = os.path.split(base_path)
+        sub_path = os.path.join(new_sub_dir, sub_path)
+        # root directory reached? -> not in Git repo
+        if new_sub_dir == "":
+            is_repo = False
+            break
+
+    return is_repo
+
+
+def is_svn_repo(path):
+    """Like is_git_repo(), but for SVN repos.
+    """
+
+    base_path = os.path.realpath(path)
+
+    return True if os.path.exists(os.path.join(base_path, ".svn")) else False
 
 
 def check_filetype(filename):
@@ -74,6 +123,8 @@ def count_and_print_todos(filename, filetype):
 
     Returns
     -------
+    lines_checked: int
+        Number of lines checked.
     num_todos : int
         Number of TODOs found.
     """
@@ -107,10 +158,16 @@ def count_and_print_todos(filename, filetype):
 def find_todos(filename):
     """Find comments in file 'filename' and write them to the terminal.
 
+    Parameters
+    ----------
+    filename : string
+
     Returns
     -------
+    lines_checked: int
+        Number of lines checked.
     num_todos : int
-        Number of TODO-like statments in parsed file.
+        Number of TODOs found.
     """
 
     file_type = check_filetype(filename)
@@ -124,54 +181,69 @@ def find_todos(filename):
     return lines_checked, num_todos
 
 
-def print_todo_line(filename, lineNumber, line):
+def print_todo_line(filename, line_number, line):
     """Print a line containing a TODO-like statement.
 
-    All formatting has to appear here. Leading white space is stripped.
+    All formatting has to be done here. Leading white space is stripped.
+
+    Parameters
+    ----------
+    filename : string
+    line_number : int
+    line : string
     """
 
     # find position of first non white-space character:
     i = len(line) - len(line.lstrip())
 
-    print("* %s, line %s: %s"%(filename, lineNumber, line[i:-1]))  # strip newline
+    print("* %s, line %s: %s"%(filename, line_number, line[i:-1]))  # strip newline
 
 
-def vc_files():
+def vc_files(path):
     """Return a list of all files that are under version control.
 
     Currently supported: git and svn.
 
-    The current directory is used.
+    Parameters
+    ----------
+    path : string
+        Path that containing a git or svn repository.
     """
 
-    failureStrings = {"git": "Not a git repository",
-                      "svn": "is not a working copy"}
+    def get_files_from_string_list(string):
+        """Return a list of absolute path to files from string containing
+        a string of relative filenames separated by new lines.
+        """
 
-    # try git first:
-    output = os.popen("git ls-files")
-    output_lines = output.readlines()
-    if(len(output_lines) > 0):
-        if(output_lines[0].rfind(failureStrings["git"]) == -1):  # directory is a git repo:
-            file_list = []
-            for filename in output_lines:
-                file_list.append(filename[:-1])  # remove \n
-            return file_list
+        file_list = string.split("\n")
+        res_list = []
+        # prepend all list elements with path as the version control tools output relative paths!
+        for f in file_list:
+            res_list.append(os.path.join(path, f))
 
-    # try svn:
-    output = os.popen("svn ls")
-    output_lines = output.readlines()
-    if(len(output_lines) > 0):
-        if(output_lines[0].rfind(failureStrings["git"]) == -1):  # directory is a svn repo:
-            file_list = []
-            for filename in output_lines:
-                file_list.append(filename[:-1])  # remove \n
-            return file_list
+        return res_list
 
-    # TODO: figure out how to use the subprocess module such that STDERR is not shown in terminal
+    file_list = []
 
-    # catch unsuccessful case:
-    print >> sys.stderr, "Directory appears to be neither a git nor svn repository!"
-    return []
+    if(is_git_repo(path)):
+        try:
+            proc = Popen(["git", "ls-files"], stdout=PIPE, stderr=PIPE, cwd=path)
+            result = proc.stdout.read()
+            file_list = get_files_from_string_list(result)
+        except OSError:  # git error
+            print >> sys.stderr, "Something wrong while executing 'git ls-files'"
+        return file_list
+    elif(is_svn_repo(path)):
+        try:
+            proc = Popen(["svn", "ls"], stdout=PIPE, stderr=PIPE, cwd=path)
+            result = proc.stdout.read()
+            file_list = get_files_from_string_list(result)
+        except OSError:
+            print >> sys.stderr, "Something wrong while executing 'svn ls'"
+        return file_list
+    else:  # catch unsuccessful case:
+        print >> sys.stderr, "Directory appears to be neither a git nor svn repository!"
+        return []
 
 
 if(__name__ == "__main__"):
@@ -190,7 +262,11 @@ if(__name__ == "__main__"):
     # decide what to do:
     # if --vc is given, go through the files under version control first:
     if(options.useVC):
-        files = vc_files()
+        if(len(args) == 0):
+            args = [os.environ["PWD"]]
+        files = []
+        for arg in args:
+            files += vc_files(get_dir(arg))
         if(len(files) > 0):
             for new_file in files:
                 args.append(new_file)
